@@ -199,9 +199,13 @@ void *mult_matrix(void *threadarg) {
 //         calcula aquela linha (linha = j)
 
   for(int p=my_data->thread_id; p<NUM_THREADS; p++){
+
+    printf("inicializando thread %d\n", my_data->thread_id);
+
     for ( i = p, nxt_a = matrixA.rows; 
       i < matrixA.height; 
       i += NUM_THREADS) {
+        printf("thread %d executando linha %d\n", my_data->thread_id, i);
 
         /* Set nxt_b to the begining of matrixB */
         nxt_b = matrixB.rows;
