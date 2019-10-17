@@ -22,10 +22,12 @@ float *b;
 float *c;
 float *scalar;
 float *result;
+int NUM_THREADS; 
 pthread_attr_t attr;
 
-
 void * mult_scalar(void *threadarg);
+
+void * mult_matrix(void *threadarg);
 
 int scalar_matrix_mult(float scalar_value, struct matrix *matrix);
 
