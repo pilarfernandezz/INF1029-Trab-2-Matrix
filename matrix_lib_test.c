@@ -164,26 +164,36 @@ void *mult_scalar(void *threadarg) {
   float *nxt_result = matrixA.rows + my_data->buffer_begin;
 
   __m256 vec_scalar = _mm256_broadcast_ss(&scalar_value);
+  
+//  for ( int i = my_data->thread_id;
+//    i < matrixA.height; 
+//    i += NUM_THREADS, nxt_a += 8, nxt_result += 8){
 
   for (long unsigned int i = my_data->buffer_begin;
-	i < my_data->buffer_end; 
-	i += my_data->stride, nxt_a += my_data->stride, 
-	nxt_result += my_data->stride) {
+		i < my_data->buffer_end; 
+		i += my_data->stride, nxt_a += my_data->stride, 
+		nxt_result += my_data->stride) {
 
-	/* Initialize the two argument arrays */
+				printf("i: %d \n", i);
+				printf("thread_id???? %d\n", my_data->thread_id); 			
+
+				/* Initialize the two argument arrays */
           __m256 vec_matrix_A = _mm256_load_ps(nxt_a);
+          printf("nxt_a: %p ", nxt_a);
 
        /* Compute the difference between the two arrays */
           __m256 vec_result = _mm256_mul_ps(vec_scalar, vec_matrix_A);
 
        /* Store the elements of the result array */
           _mm256_store_ps(nxt_result, vec_result);
+          printf("nxt_result: %f ", *nxt_result);
   }
 
   pthread_exit(NULL);
 }
 
 void *mult_matrix(void *threadarg) {
+
   int i, j, k;
   struct thread_data *my_data;
 
@@ -193,67 +203,54 @@ void *mult_matrix(void *threadarg) {
   float *nxt_b;
   float *nxt_c;
 
-// primeira linha para cada thread (0,1,2,3...)
-// for(i=0; i< numero de threads; i++)
-//     for(j=i; j<numero de linhas; j+=#threads)
-//         calcula aquela linha (linha = j)
+  for ( i = my_data->thread_id, nxt_a = matrixA.rows; 
+    i < matrixA.height; 
+    i += NUM_THREADS) {
+    
+      printf("thread %d executando linha %d\n", my_data->thread_id, i);
 
-  for(int p=my_data->thread_id; p<NUM_THREADS; p++){
+      /* Set nxt_b to the begining of matrixB */
+      nxt_b = matrixB.rows;
 
-    printf("inicializando thread %d\n", my_data->thread_id);
+      for ( j = 0; 
+      j < matrixA.width; 
+      j += 1, nxt_a += 1) {
+      /* Initialize the scalar vector with the next scalar value */
+        __m256 vec_a = _mm256_set1_ps(*nxt_a);
 
-    for ( i = p, nxt_a = matrixA.rows; 
-      i < matrixA.height; 
-      i += NUM_THREADS) {
-        printf("thread %d executando linha %d\n", my_data->thread_id, i);
+        /* 
+        * Compute the product between the scalar vector and the elements of 
+        * a row of matrixB, 8 elements at a time, and add the result to the 
+        * respective elements of a row of matrixC, 8 elements at a time.
+        */
+          for (k = 0, nxt_c = matrixC.rows + (matrixC.width * i);
+            k < matrixB.width;
+          k += VECTOR_SIZE, nxt_b += VECTOR_SIZE, nxt_c += VECTOR_SIZE) {
 
-        /* Set nxt_b to the begining of matrixB */
-        nxt_b = matrixB.rows;
+            /* Load part of b row (size of vector) */
+            __m256 vec_b = _mm256_load_ps(nxt_b);
 
-        for ( j = 0; 
-        j < matrixA.width; 
-        j += 1, nxt_a += 1) {
-        /* Initialize the scalar vector with the next scalar value */
-          __m256 vec_a = _mm256_set1_ps(*nxt_a);
+                /* Initialize vector c with zero or load part of c row (size of vector) */
+            __m256 vec_c;
 
-          /* 
-          * Compute the product between the scalar vector and the elements of 
-          * a row of matrixB, 8 elements at a time, and add the result to the 
-          * respective elements of a row of matrixC, 8 elements at a time.
-          */
-            for (k = 0, nxt_c = matrixC.rows + (matrixC.width * i);
-              k < matrixB.width;
-            k += VECTOR_SIZE, nxt_b += VECTOR_SIZE, nxt_c += VECTOR_SIZE) {
+            if (j == 0) { /* if vec_a is the first scalar vector, vec_c is set to zero */
+            vec_c = _mm256_setzero_ps();
+            } else { /* otherwise, load part of c row (size of vector) to vec_c */
+            vec_c = _mm256_load_ps(nxt_c);
+            }
 
-              /* Load part of b row (size of vector) */
-              __m256 vec_b = _mm256_load_ps(nxt_b);
+            /* Compute the expression res = a * b + c between the three vectors */
+            vec_c = _mm256_fmadd_ps(vec_a, vec_b, vec_c);
 
-                  /* Initialize vector c with zero or load part of c row (size of vector) */
-              __m256 vec_c;
-
-              if (j == 0) { /* if vec_a is the first scalar vector, vec_c is set to zero */
-              vec_c = _mm256_setzero_ps();
-              } else { /* otherwise, load part of c row (size of vector) to vec_c */
-              vec_c = _mm256_load_ps(nxt_c);
-              }
-
-              /* Compute the expression res = a * b + c between the three vectors */
-              vec_c = _mm256_fmadd_ps(vec_a, vec_b, vec_c);
-
-              /* Store the elements of the result vector */
-              _mm256_store_ps(nxt_c, vec_c);
-          }
+            /* Store the elements of the result vector */
+            _mm256_store_ps(nxt_c, vec_c);
+		
         }
       }
-  }
-
-
-
-  
+    }
 
   pthread_exit(NULL);
 }
-
 
 int main_func(int argc, char *argv[]) {
   unsigned long int DimA_M, DimA_N, DimB_M, DimB_N;
@@ -280,11 +277,13 @@ int main_func(int argc, char *argv[]) {
   DimA_N = strtol(argv[3], &eptr, 10);
   DimB_M = strtol(argv[4], &eptr, 10);
   DimB_N = strtol(argv[5], &eptr, 10);
-  NUM_THREADS = strtol(argv[6], &eptr, 10);
+  int num = strtol(argv[6], &eptr, 10);
   matrixA_filename = argv[7];
   matrixB_filename = argv[8];
   result1_filename = argv[9];
   result2_filename = argv[10];
+  
+  set_num_threads(num);
 
   if ((scalar_value == 0.0f) || (DimA_M == 0) || (DimA_N == 0) || (DimB_M == 0) || (DimB_N == 0) || NUM_THREADS == 0) {
     printf("%s: erro na conversao do argumento: errno = %d\n", argv[0], errno);

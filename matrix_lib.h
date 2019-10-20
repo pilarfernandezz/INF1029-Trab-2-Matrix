@@ -25,6 +25,8 @@ float *result;
 int NUM_THREADS; 
 pthread_attr_t attr;
 
+void set_num_threads(int NUM_THREADS);
+
 void * mult_scalar(void *threadarg);
 
 void * mult_matrix(void *threadarg);

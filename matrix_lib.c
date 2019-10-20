@@ -8,9 +8,12 @@
 #include "timer.h"
 #include "matrix_lib.h"
 
+void set_num_threads(int num_threads){
+	NUM_THREADS = num_threads;
+}
 
 int scalar_matrix_mult(float scalar_value, struct matrix *matrix) { 
-    /* Define auxiliary variables to work with threads */
+  /* Define auxiliary variables to work with threads */
   struct thread_data thread_data_array[NUM_THREADS];
   pthread_t thread[NUM_THREADS];
   int rc;
@@ -50,7 +53,7 @@ int scalar_matrix_mult(float scalar_value, struct matrix *matrix) {
 
 int matrix_matrix_mult(struct matrix *a, struct matrix *b, struct matrix *c) {
 
-    /* Define auxiliary variables to work with threads */
+  /* Define auxiliary variables to work with threads */
   struct thread_data thread_data_array[NUM_THREADS];
   pthread_t thread[NUM_THREADS];
   int rc;
