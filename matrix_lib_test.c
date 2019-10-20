@@ -165,28 +165,24 @@ void *mult_scalar(void *threadarg) {
 
   __m256 vec_scalar = _mm256_broadcast_ss(&scalar_value);
   
-//  for ( int i = my_data->thread_id;
-//    i < matrixA.height; 
-//    i += NUM_THREADS, nxt_a += 8, nxt_result += 8){
 
-  for (long unsigned int i = my_data->buffer_begin;
-		i < my_data->buffer_end; 
-		i += my_data->stride, nxt_a += my_data->stride, 
+	// i<matrixA.width ???
+
+  for (long unsigned int i = my_data->thread_id;
+		i < matrixA.width; 
+		i += NUM_THREADS, nxt_a += my_data->stride, 
 		nxt_result += my_data->stride) {
 
-				printf("i: %d \n", i);
-				printf("thread_id???? %d\n", my_data->thread_id); 			
+					printf("thread %d executando linha %d\n", my_data->thread_id, i);
 
 				/* Initialize the two argument arrays */
           __m256 vec_matrix_A = _mm256_load_ps(nxt_a);
-          printf("nxt_a: %p ", nxt_a);
 
        /* Compute the difference between the two arrays */
           __m256 vec_result = _mm256_mul_ps(vec_scalar, vec_matrix_A);
 
        /* Store the elements of the result array */
           _mm256_store_ps(nxt_result, vec_result);
-          printf("nxt_result: %f ", *nxt_result);
   }
 
   pthread_exit(NULL);
