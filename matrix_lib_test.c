@@ -155,23 +155,55 @@ int check_errors(struct matrix *matrix, float scalar_value) {
   return 1;
 }
 
+//le sequencial
+// void *mult_scalar(void *threadarg) {
+//   struct thread_data *my_data;
+//   my_data = (struct thread_data *) threadarg;
+
+//   float *nxt_a = matrixA.rows + my_data->buffer_begin;
+//   float *nxt_result = matrixA.rows + my_data->buffer_begin;
+
+//    __m256 vec_scalar_value = _mm256_set1_ps(scalar_value);
+
+//   for (long unsigned int i = my_data->buffer_begin;
+// 	i < my_data->buffer_end; 
+// 	i += my_data->stride, nxt_a += my_data->stride, 
+// 	nxt_result += my_data->stride) {
+
+//         printf("thread %d executando linha %d\n", my_data->thread_id, i/8);
+
+//           __m256 vec_a= _mm256_load_ps(nxt_a);
+
+//        /* Compute the difference between the two arrays */
+//           __m256 vec_result = _mm256_mul_ps(vec_a, vec_scalar_value);
+
+//        /* Store the elements of the result array */
+//           _mm256_store_ps(nxt_result, vec_result);
+//   }
+
+//   pthread_exit(NULL);
+// }
+
+//le daquele outro jeito
 void *mult_scalar(void *threadarg) {
   struct thread_data *my_data;
 
   my_data = (struct thread_data *) threadarg;
 
-  float *nxt_a = matrixA.rows + my_data->buffer_begin;
-  float *nxt_result = matrixA.rows + my_data->buffer_begin;
+  // float *nxt_a = matrixA.rows + my_data->buffer_begin;
+  // float *nxt_result = matrixA.rows + my_data->buffer_begin;
+
+  float *nxt_a = matrixA.rows + matrixA.width*my_data->thread_id;
+  float *nxt_result = matrixA.rows + matrixA.width*my_data->thread_id;
 
   __m256 vec_scalar = _mm256_broadcast_ss(&scalar_value);
   
-
 	// i<matrixA.width ???
 
   for (long unsigned int i = my_data->thread_id;
-		i < matrixA.width; 
-		i += NUM_THREADS, nxt_a += my_data->stride, 
-		nxt_result += my_data->stride) {
+		i < matrixA.height; 
+		i += NUM_THREADS, nxt_a += matrixA.width*NUM_THREADS, 
+		nxt_result += matrixA.width*NUM_THREADS) {
 
 					printf("thread %d executando linha %d\n", my_data->thread_id, i);
 
@@ -279,6 +311,11 @@ int main_func(int argc, char *argv[]) {
   result1_filename = argv[9];
   result2_filename = argv[10];
   
+  if(num == 0)
+  {
+	  num = 1;
+  }
+
   set_num_threads(num);
 
   if ((scalar_value == 0.0f) || (DimA_M == 0) || (DimA_N == 0) || (DimB_M == 0) || (DimB_N == 0) || NUM_THREADS == 0) {
@@ -369,7 +406,7 @@ int main_func(int argc, char *argv[]) {
   printf("---------- Matrix A ----------\n");
   print_matrix(&matrixA);
 
-  /* Calculate the product between matrix A and matrix B */
+    /* Calculate the product between matrix A and matrix B */
   printf("Executing matrix_matrix_mult(matrixA, mattrixB, matrixC)...\n");
   if (!matrix_matrix_mult(&matrixA, &matrixB, &matrixC)) {
 	  printf("%s: matrix_matrix_mult problem.", argv[0]);
