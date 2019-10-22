@@ -17,13 +17,10 @@ struct thread_data {
 };
 
 float scalar_value;
-float *a;
-float *b;
-float *c;
-float *scalar;
 float *result;
 int NUM_THREADS; 
 pthread_attr_t attr;
+struct matrix matrixA, matrixB, matrixC;
 
 void set_num_threads(int NUM_THREADS);
 
